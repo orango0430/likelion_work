@@ -1,4 +1,4 @@
-abstract public class role {
+abstract public class role implements Submit_assignment {
     public String part;
     public String name;
     public String major;
@@ -9,7 +9,7 @@ abstract public class role {
         this.generation = generation;
         this.part = part;
     }
-
+    public abstract boolean cansubmit();
     public abstract String getrole();
 
 }

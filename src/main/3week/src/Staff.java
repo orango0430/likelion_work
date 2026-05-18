@@ -2,9 +2,7 @@ public class Staff extends role implements Submit_assignment {
     String position;
 
     @Override
-    public boolean cansubmit() {
-        return false;
-    }
+    public boolean cansubmit() {return false;}
 
     public Staff(String name, String major, int generation, String part, String position) {
         super(name, major,generation,part);
