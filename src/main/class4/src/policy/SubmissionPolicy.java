@@ -28,7 +28,6 @@ public class SubmissionPolicy{
                     StaffSubmissionPolicy.staffregister(roles, part_check, sc);
                 } else {
                     System.out.println("error");
-                    continue;
                 }
             } else if (select == 2) {
                 System.out.println("전체 멤버 목록");
