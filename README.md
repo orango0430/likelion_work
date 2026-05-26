@@ -1,4 +1,4 @@
-###  Update  2026 05/18 
+###  Update  2026 05/27
 
 # 🦁 멋쟁이사자처럼 Java 과제 모음
 
@@ -139,8 +139,62 @@ for (role r : part_check.get(searchPart)) {
 
 ---
 
-## 기술 스택
+## 5주차 - 레이어 분리 & 의존성 주입 (DI/IoC)
 
-- Language: `Java`
-- IDE: `IntelliJ IDEA`
-- Build Tool: `Gradle`
+> Service가 Repository를 직접 생성하지 않도록 리팩토링하여, 의존성 주입(DI)과 제어의 역전(IoC)의 필요성을 구조적으로 이해
+
+### 학습 내용
+- Repository, Service, Main 세 개의 레이어로 책임 분리
+- 인터페이스로 Repository 추상화
+- 생성자를 통한 의존성 주입(DI)
+- `final` 키워드로 불변 필드 설정
+- Memory/Mock 두 개의 구현체 교체 체험
+
+### 클래스 구조
+```
+MemberRepository (인터페이스)
+├── MemoryMemberRepository — 실제 데이터 저장/조회
+└── MockMemberRepository   — 더미 데이터 반환, 실제 저장 안 함
+
+MemberService — Repository 인터페이스에 의존, 생성자로 주입받음
+Main          — Repository 구현체 선택 후 Service에 주입
+```
+
+### Step 1 vs Step 2 비교
+| 항목 | Step 1 (직접 생성) | Step 2 (생성자 주입) |
+|------|------|------|
+| 객체 생성 위치 | Service 내부 | Main (외부) |
+| 의존 대상 | 클래스 (구현체) | 인터페이스 |
+| 구현체 교체 시 | Service 코드 수정 필요 | Main만 수정 |
+| 결합도 | 강함 | 느슨함 |
+
+### 핵심 코드
+```java
+// MemberRepository 인터페이스
+public interface MemberRepository {
+    void save(role member);
+    List<role> findAll();
+    role findByName(String name);
+    boolean existsByName(String name);
+}
+
+// 생성자 DI - Service가 Repository를 직접 생성하지 않음
+public class MemberService {
+    private final MemberRepository repository;  // final로 불변 설정
+
+    public MemberService(MemberRepository repository) {
+        this.repository = repository;  // 외부에서 주입
+    }
+}
+
+// Main에서 구현체 선택 후 주입
+MemberRepository repository;
+if (choice == 1) {
+    repository = new MemoryMemberRepository();
+} else {
+    repository = new MockMemberRepository();  // Service 코드 수정 없이 교체!
+}
+MemberService service = new MemberService(repository);
+```
+
+---
