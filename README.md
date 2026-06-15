@@ -1,4 +1,4 @@
-###  Update  2026 05/27
+###  Update  2026 06/15
 
 # 🦁 멋쟁이사자처럼 Java 과제 모음
 
@@ -198,3 +198,81 @@ MemberService service = new MemberService(repository);
 ```
 
 ---
+
+---
+
+## 6주차 - Spring Bean & IoC / DI / REST Controller
+
+> 5주차에서 직접 new로 조립했던 코드를 스프링 컨테이너가 관리하도록 전환하고, 첫 번째 REST API 엔드포인트 구현
+
+### 학습 내용
+- `@Configuration` + `@Bean`으로 스프링 컨테이너에 빈 등록
+- `ApplicationContext`(스프링 컨테이너) 개념과 빈 관리 방식 이해
+- 수동 주입(`@Bean`)과 자동 주입(`@Service`, `@Repository`, `@Component`) 차이
+- 생성자 주입 방식과 `@Autowired`의 역할
+- 생성자가 1개일 때 `@Autowired` 생략 가능한 이유
+- `@RestController` + `@GetMapping`으로 HTTP 요청 처리
+
+### 클래스 구조
+```
+AppConfig (@Configuration)
+├── memberRepository() @Bean → MemoryMemberRepository 등록
+└── memberService()    @Bean → MemberService 등록 + MemberRepository 주입
+
+HelloController (@RestController)
+└── GET /hello → "Hello, Likelion!" 반환
+```
+
+### 5주차 vs 6주차 비교
+
+| 구분 | 5주차 (직접 조립) | 6주차 (Spring Bean) |
+|------|------|------|
+| 객체 생성 | 개발자 (new) | 개발자 (new) |
+| 객체 관리 | 없음 (지역변수) | 스프링 컨테이너 |
+| 싱글톤 보장 | ❌ | ✅ 자동 |
+| 어디서든 사용 | ❌ Main에서만 | ✅ getBean()으로 |
+| 생명주기 관리 | ❌ | ✅ init/destroy |
+
+### 핵심 코드
+
+```java
+// AppConfig — 수동 빈 등록
+@Configuration
+public class AppConfig {
+    @Bean
+    public MemberRepository memberRepository() {
+        return new MemoryMemberRepository();
+    }
+
+    @Bean
+    public MemberService memberService() {
+        return new MemberService(memberRepository()); // DI 주입
+    }
+}
+
+// 스프링 컨테이너에서 빈 꺼내기
+ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+MemberService service = context.getBean(MemberService.class);
+
+// HelloController — 첫 번째 REST API
+@RestController
+public class HelloController {
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello, Likelion!";
+    }
+}
+```
+
+### 핵심 개념 요약
+
+| 어노테이션 | 역할 |
+|------|------|
+| `@Configuration` | 이 클래스가 빈 설정 클래스임을 선언, CGLIB 프록시로 싱글톤 보장 |
+| `@Bean` | 메서드 반환값을 스프링 컨테이너에 빈으로 등록 |
+| `@Autowired` | 컨테이너에서 타입에 맞는 빈을 찾아 자동 주입 |
+| `@RestController` | HTTP 요청을 처리하는 컨트롤러, 반환값을 JSON/문자열로 응답 |
+| `@GetMapping` | GET 방식의 특정 경로 요청을 메서드에 매핑 |
+
+> 💡 IoC(제어의 역전): 객체 제어권이 개발자 → 스프링 컨테이너로 이전  
+> 💡 생성자 1개일 때 `@Autowired` 생략 가능 (Spring 4.3+)
