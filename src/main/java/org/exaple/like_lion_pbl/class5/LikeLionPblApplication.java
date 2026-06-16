@@ -13,5 +13,7 @@ public class LikeLionPblApplication {
         SpringApplication.run(LikeLionPblApplication.class, args);
         ApplicationContext context = new AnnotationConfigApplicationContext(Appconfig.class);
         MemberService service = context.getBean(MemberService.class);
+        System.out.println("서비스 가져오기 성공" + service);
+
     }
 }

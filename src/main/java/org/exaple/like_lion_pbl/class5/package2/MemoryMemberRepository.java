@@ -26,7 +26,24 @@ public class MemoryMemberRepository implements MemberRepository {
         }
         return null;
     }
+    @Override
     public boolean existsByName(String name){
-        return findByName(name) != null;
+        for(role r : roles){
+            if(r.name.equals(name)) return true;
+        }
+        return false;
+    }
+    @Override
+    public void updateByName(String name, role member){
+        for(int i = 0; i < roles.size(); i++){
+            if(roles.get(i).name.equals(name)){
+                roles.set(i,member);
+                return;
+            }
+        }
+    }
+    @Override
+    public boolean deleteByName(String name) {
+        return roles.removeIf(r -> r.name.equals(name));
     }
 }
