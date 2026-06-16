@@ -1,4 +1,4 @@
-###  Update  2026 06/15
+###  Update  2026 06/16
 
 # 🦁 멋쟁이사자처럼 Java 과제 모음
 
@@ -276,3 +276,107 @@ public class HelloController {
 
 > 💡 IoC(제어의 역전): 객체 제어권이 개발자 → 스프링 컨테이너로 이전  
 > 💡 생성자 1개일 때 `@Autowired` 생략 가능 (Spring 4.3+)
+---
+
+## 7주차 - REST API / DTO / ResponseEntity
+
+> DTO로 요청·응답을 분리하고, HTTP 메서드와 상태코드를 활용한 완전한 CRUD REST API 구현
+
+### 학습 내용
+- REST API 설계 원칙 (URI는 명사, 행위는 HTTP 메서드)
+- HTTP 메서드별 역할 (GET / POST / PUT / DELETE)
+- HTTP 상태코드 의미 (200 / 201 / 204 / 404 / 409)
+- `@PathVariable`과 `@RequestBody`의 차이
+- DTO(Data Transfer Object) 개념과 필요성
+- 역할별 DTO 분리 (Request / Response)
+- `ResponseEntity`로 상태코드 제어
+
+### DTO 구조
+```
+dto/
+├── LionCreateRequest   — Lion 생성 요청 (name, major, generation, part, studentId)
+├── StaffCreateRequest  — Staff 생성 요청 (name, major, generation, part, position)
+├── LionUpdateRequest   — Lion 수정 요청 (name 제외, URL PathVariable로 받음)
+├── StaffUpdateRequest  — Staff 수정 요청 (name 제외, URL PathVariable로 받음)
+├── LionResponse        — Lion 조회 응답 (roleName 추가)
+└── StaffResponse       — Staff 조회 응답 (roleName 추가)
+```
+
+### 완성된 API 목록
+| 메서드 | 경로 | 기능 | 성공 | 실패 |
+|------|------|------|------|------|
+| POST | /members/lions | Lion 등록 | 201 | 409 (중복) |
+| POST | /members/staffs | Staff 등록 | 201 | 409 (중복) |
+| GET | /members/{name} | 단일 조회 | 200 | 404 (없음) |
+| PUT | /members/lions/{name} | Lion 수정 | 200 | 404 (없음) |
+| PUT | /members/staffs/{name} | Staff 수정 | 200 | 404 (없음) |
+| DELETE | /members/{name} | 멤버 삭제 | 204 | 404 (없음) |
+
+### 핵심 코드
+
+```java
+// MemberController — CRUD API
+@RestController
+@RequestMapping("/members")
+public class MemberController {
+
+    private final MemberService memberService;
+
+    public MemberController(MemberService memberService) {
+        this.memberService = memberService; // 생성자 주입 (@Autowired 생략)
+    }
+
+    // POST /members/lions — Lion 등록
+    @PostMapping("/lions")
+    public ResponseEntity<LionResponse> createLion(@RequestBody LionCreateRequest request) {
+        LionResponse response = memberService.createLion(request);
+        if (response == null) return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409
+        return ResponseEntity.status(HttpStatus.CREATED).body(response); // 201
+    }
+
+    // GET /members/{name} — 단일 조회
+    @GetMapping("/{name}")
+    public ResponseEntity<Object> getMember(@PathVariable String name) {
+        Object response = memberService.findMemberByName(name);
+        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.ok(response); // 200
+    }
+
+    // PUT /members/lions/{name} — Lion 수정
+    @PutMapping("/lions/{name}")
+    public ResponseEntity<LionResponse> updateLion(@PathVariable String name, @RequestBody LionUpdateRequest request) {
+        LionResponse response = memberService.updateLion(name, request);
+        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.ok(response); // 200
+    }
+
+    // DELETE /members/{name} — 멤버 삭제
+    @DeleteMapping("/{name}")
+    public ResponseEntity<Void> deleteMember(@PathVariable String name) {
+        boolean deleted = memberService.deleteMember(name);
+        if (!deleted) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.noContent().build(); // 204
+    }
+}
+
+// LionResponse — static from() 팩토리 메서드
+public static LionResponse from(Lion lion) {
+    return new LionResponse(
+        lion.name, lion.major, lion.generation,
+        lion.part, "아기사자", lion.studentId
+    );
+}
+```
+
+### 핵심 개념 요약
+
+| 개념 | 설명 |
+|------|------|
+| `@PathVariable` | URL 경로에서 값 추출 → `/members/김사자` |
+| `@RequestBody` | HTTP Body JSON을 객체로 변환 |
+| `ResponseEntity` | 상태코드 + 바디를 함께 반환하는 스프링 클래스 |
+| `static from()` | 도메인 객체 → Response DTO 변환 팩토리 메서드 |
+| DTO 분리 | Request(입력) / Response(출력) 역할별로 분리 |
+
+> 💡 URI에는 동사 쓰지 말고 명사로 자원만 표현, 행위는 HTTP 메서드가 담당  
+> 💡 식별자(누구?)는 PathVariable, 데이터(뭘로?)는 RequestBody
