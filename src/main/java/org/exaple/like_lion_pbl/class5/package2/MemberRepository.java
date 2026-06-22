@@ -1,14 +1,13 @@
 package org.exaple.like_lion_pbl.class5.package2;
 
-import org.exaple.like_lion_pbl.class5.role.role;
+import org.exaple.like_lion_pbl.class5.domain.Member;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Optional;
 
-public interface MemberRepository {
-    void save(role member);
-    List<role> findAll();
-    role findByName(String name);
-    boolean existsByName(String name);
-    void updateByName(String name, role member);
-    boolean deleteByName(String name);
+@Repository
+public interface MemberRepository extends JpaRepository<Member, Long>{
+    Optional<Member> findByName(String name);
+
 }

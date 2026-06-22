@@ -8,59 +8,56 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@RequestMapping("/memebers")
+@RequestMapping("/members")
 public class MemberController {
     private final MemberService memberService;
 
-    public MemberController(MemberService memberService){
-        this.memberService = memberService;
+    public MemberController (MemberService service){
+        this.memberService = service;
     }
     @PostMapping("/lions")
-    public ResponseEntity<LionResponse> createLion(@RequestBody LionCreateRequest request){
-        LionResponse response = memberService.createLion(request);
-        if(response == null){
-            return ResponseEntity.status(HttpStatus.CONFLICT).build(); //409
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(response); //201
+    public ResponseEntity<MemberResponse> createLion(@RequestBody LionCreateRequest request) {
+        MemberResponse response = memberService.createLion(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response); // 201
     }
-    @PostMapping("/Staffs")
-    public ResponseEntity<StaffResponse> createStaff(@RequestBody StaffCreateRequest request){
-        StaffResponse response = memberService.createStaff(request);
-        if(response == null){
-            return ResponseEntity.status(HttpStatus.CONFLICT).build(); //409
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(response); //201
+
+    // POST /members/staffs
+    @PostMapping("/staffs")
+    public ResponseEntity<MemberResponse> createStaff(@RequestBody StaffCreateRequest request) {
+        MemberResponse response = memberService.createStaff(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response); // 201
     }
-    @GetMapping("/{name}")
-    public ResponseEntity<Object> getMember(@PathVariable String name){
-        Object response = memberService.findMemberByName(name);
-        if(response == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); //404
-        }
-        return ResponseEntity.ok(response); //200
+
+    // GET /members/{id} — name → id로 변경
+    @GetMapping("/{id}")
+    public ResponseEntity<MemberResponse> getMember(@PathVariable Long id) {
+        MemberResponse response = memberService.findById(id);
+        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.ok(response); // 200
     }
-    @PutMapping("/lions/{name}")
-    public ResponseEntity<LionResponse> updateLion(@PathVariable String name, @RequestBody LionUpdateRequest request){
-        LionResponse response = memberService.updateLion(name,request);
-        if(response == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); //404
-        }
-        return ResponseEntity.ok(response);
+
+    // PUT /members/lions/{id} — name → id로 변경
+    @PutMapping("/lions/{id}")
+    public ResponseEntity<MemberResponse> updateLion(@PathVariable Long id, @RequestBody LionUpdateRequest request) {
+        MemberResponse response = memberService.updateLion(id, request);
+        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.ok(response); // 200
     }
-    @PutMapping("/Staffs/{name}")
-    public ResponseEntity<StaffResponse> updateStaff(@PathVariable String name, @RequestBody StaffUpdateRequest request){
-        StaffResponse response = memberService.updateStaff(name,request);
-        if(response == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); //404
-        }
-        return ResponseEntity.ok(response); //200
+
+    // PUT /members/staffs/{id} — name → id로 변경
+    @PutMapping("/staffs/{id}")
+    public ResponseEntity<MemberResponse> updateStaff(@PathVariable Long id, @RequestBody StaffUpdateRequest request) {
+        MemberResponse response = memberService.updateStaff(id, request);
+        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.ok(response); // 200
     }
-    @DeleteMapping("/members/{name}")
-    public ResponseEntity<Void> deleteMember(@PathVariable String name){
-        boolean deleted = memberService.deleteMemeber(name);
-        if(!deleted){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); //404
-        }
-        return ResponseEntity.noContent().build(); //204
+
+    // DELETE /members/{id} — name → id로 변경
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMember(@PathVariable Long id) {
+        boolean deleted = memberService.deleteMember(id);
+        if (!deleted) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        return ResponseEntity.noContent().build(); // 204
     }
+
 }

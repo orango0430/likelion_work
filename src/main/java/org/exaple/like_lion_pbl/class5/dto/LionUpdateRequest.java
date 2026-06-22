@@ -5,11 +5,12 @@ public class LionUpdateRequest {
     public int generation;
     public String part;
     public int student_id;
+    public String studentId;
 
-    public LionUpdateRequest(String major, int generation, String part, int student_id) {
+    public LionUpdateRequest(String major, int generation, String part, String studentId) {
         this.major = major;
         this.generation = generation;
         this.part = part;
-        this.student_id = student_id;
+        this.studentId = studentId;
     }
 }
