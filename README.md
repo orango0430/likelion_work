@@ -1,8 +1,8 @@
-###  Update  2026 06/16
+###  Update  2026 06/22
 
 # 🦁 멋쟁이사자처럼 Java 과제 모음
 
-Java 기초부터 객체지향, 컬렉션까지 주차별로 학습한 내용을 정리한 저장소입니다.
+Java 기초부터 객체지향, 컬렉션, Spring boot 전환까지 주차별로 학습한 내용을 정리한 저장소입니다.
 
 ---
 
@@ -380,3 +380,134 @@ public static LionResponse from(Lion lion) {
 
 > 💡 URI에는 동사 쓰지 말고 명사로 자원만 표현, 행위는 HTTP 메서드가 담당  
 > 💡 식별자(누구?)는 PathVariable, 데이터(뭘로?)는 RequestBody
+---
+
+## 8주차 - JPA / MySQL 연동 & 단일 엔티티 리팩토링
+
+> 메모리 저장소를 JPA + MySQL 기반으로 교체하고, 상속 구조(Lion/Staff)를 단일 Member 엔티티로 간소화
+
+### 학습 내용
+- Spring Boot + MySQL 연동 (`spring-boot-starter-data-jpa`, `mysql-connector-j`)
+- `@Entity`, `@Id`, `@GeneratedValue`로 JPA 엔티티 설계
+- `@Enumerated(EnumType.STRING)`으로 Enum을 DB에 문자열로 저장
+- `JpaRepository` 상속으로 CRUD 메서드 자동 제공
+- 메서드 이름 규칙으로 자동 쿼리 생성 (`findByName`, `existsById`)
+- `Optional`로 null 안전하게 처리
+- 상속 구조(Lion/Staff) → 단일 엔티티(Member + RoleType) 리팩토링
+- 응답 DTO 통합 (`LionResponse` + `StaffResponse` → `MemberResponse`)
+- 식별자 변경 (`String name` → `Long id`)
+
+### 구조 변화
+
+```
+Before (7주차): Role → Lion (studentId)
+                     └── Staff (position)
+
+After (8주차):  Member (id, name, major, generation, part, roleType, studentId, position)
+                RoleType { LION("아기사자"), STAFF("운영진") }
+```
+
+### 삭제된 파일
+| 파일/패키지 | 이유 |
+|------|------|
+| `MemoryMemberRepository.java` | JpaRepository가 대체 |
+| `AppConfig.java` | @Service/@Repository로 자동 빈 등록 |
+| `domain/role/` 패키지 전체 | Member 엔티티로 대체 |
+| `LionResponse.java` | MemberResponse로 통합 |
+| `StaffResponse.java` | MemberResponse로 통합 |
+
+### 완성된 API 목록
+| 메서드 | 경로 | 기능 | 성공 | 실패 |
+|------|------|------|------|------|
+| POST | /members/lions | Lion 등록 | 201 | - |
+| POST | /members/staffs | Staff 등록 | 201 | - |
+| GET | /members/{id} | 단일 조회 | 200 | 404 (없음) |
+| PUT | /members/lions/{id} | Lion 수정 | 200 | 404 (없음) |
+| PUT | /members/staffs/{id} | Staff 수정 | 200 | 404 (없음) |
+| DELETE | /members/{id} | 멤버 삭제 | 204 | 404 (없음) |
+
+### 핵심 코드
+
+```java
+// Member 엔티티
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Member {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT
+    private Long id;
+
+    private String name;
+    private String major;
+    private String part;
+    private int generation;
+
+    @Enumerated(EnumType.STRING) // DB에 "LION", "STAFF" 문자열로 저장
+    private RoleType roleType;
+
+    private String studentId; // Lion일 때만 값, Staff는 null
+    private String position;  // Staff일 때만 값, Lion은 null
+
+    public Member(String name, String major, String part, int generation,
+                  RoleType roleType, String studentId, String position) { ... }
+
+    public void updateInfo(String major, String part, int generation) { ... }
+    public void updateStudentId(String studentId) { ... }
+    public void updatePosition(String position) { ... }
+}
+
+// RoleType Enum
+@Getter
+@RequiredArgsConstructor
+public enum RoleType {
+    LION("아기사자"),
+    STAFF("운영진");
+
+    private final String displayName;
+}
+
+// MemberRepository - JpaRepository 상속
+@Repository
+public interface MemberRepository extends JpaRepository<Member, Long> {
+    Optional<Member> findByName(String name); // 메서드 이름으로 자동 쿼리 생성
+}
+
+// MemberResponse - 응답 DTO 통합
+public class MemberResponse {
+    public Long id;
+    public String name;
+    public String major;
+    public int generation;
+    public String part;
+    public String roleName;
+    public String studentId;
+    public String position;
+
+    public static MemberResponse from(Member member) {
+        return new MemberResponse(
+            member.getId(), member.getName(), member.getMajor(),
+            member.getGeneration(), member.getPart(),
+            member.getRoleType().getDisplayName(), // enum → "아기사자"/"운영진"
+            member.getStudentId(), member.getPosition()
+        );
+    }
+}
+```
+
+### 핵심 개념 요약
+
+| 개념 | 설명 |
+|------|------|
+| `@Entity` | 이 클래스가 DB 테이블과 매핑됨을 선언 |
+| `@GeneratedValue(IDENTITY)` | DB AUTO_INCREMENT 사용 (id 자동 생성) |
+| `@Enumerated(EnumType.STRING)` | Enum을 숫자 대신 문자열로 DB에 저장 |
+| `JpaRepository<Member, Long>` | 엔티티 타입, PK 타입 지정 → CRUD 자동 제공 |
+| `Optional` | null 대신 안전하게 값 유무 처리 |
+| `save()` | id 없으면 INSERT, id 있으면 UPDATE 자동 판단 |
+| `ddl-auto=create` | 앱 실행 시 테이블 자동 생성 (개발용) |
+
+> 💡 `JpaRepository` 상속하면 `save()`, `findById()`, `deleteById()`, `existsById()` 등 자동 제공  
+> 💡 `save()` 반환값을 사용해야 DB에서 채워진 `id` 값을 쓸 수 있음  
+> 💡 식별자가 `name` → `id`로 바뀐 이유: DB의 PK 기반 식별이 더 안전하고 정확함
