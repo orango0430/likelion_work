@@ -1,11 +1,13 @@
 package org.exaple.like_lion_pbl.class5.package2;
 
+import org.springframework.transaction.annotation.Transactional;
 import org.exaple.like_lion_pbl.class5.domain.Member;
 import org.exaple.like_lion_pbl.class5.domain.RoleType;
 import org.exaple.like_lion_pbl.class5.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+@Transactional(readOnly = true)
 @Service
 public class MemberService {
     private final MemberRepository repository;
@@ -15,13 +17,14 @@ public class MemberService {
         this.repository = repository;
     }
 
+    @Transactional
     public MemberResponse createLion(LionCreateRequest request) {
         Member member = new Member(request.name, request.major, request.part,
                 request.generation, RoleType.LION, request.studentId, null);
         Member saved = repository.save(member);
         return MemberResponse.from(saved);
     }
-
+    @Transactional
     public MemberResponse createStaff(StaffCreateRequest request) {
         Member member = new Member(request.name, request.major, request.part,
                 request.generation, RoleType.STAFF, null, request.position);
@@ -34,7 +37,7 @@ public class MemberService {
         if (member == null) return null;
         return MemberResponse.from(member);
     }
-
+    @Transactional
     public MemberResponse updateLion(Long id, LionUpdateRequest request) {
         Member member = repository.findById(id).orElse(null);
         if (member == null) return null;
@@ -43,7 +46,7 @@ public class MemberService {
         Member saved = repository.save(member);
         return MemberResponse.from(saved);
     }
-
+    @Transactional
     public MemberResponse updateStaff(Long id, StaffUpdateRequest request) {
         Member member = repository.findById(id).orElse(null);
         if (member == null) return null;
@@ -52,7 +55,7 @@ public class MemberService {
         Member saved = repository.save(member);
         return MemberResponse.from(saved);
     }
-
+    @Transactional
     public boolean deleteMember(Long id) {
         if (!repository.existsById(id)) return false;
         repository.deleteById(id);

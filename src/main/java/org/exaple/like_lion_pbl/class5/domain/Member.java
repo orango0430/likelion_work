@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
-import org.hibernate.annotations.AnyDiscriminatorImplicitValues;
+import org.exaple.like_lion_pbl.class5.assignment.domain.Assignment;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -23,6 +26,9 @@ public class Member {
     private RoleType roleType;
     private String studentId;
     private String position;
+
+    @OneToMany(mappedBy = "member")
+    public List<Assignment> assignments = new ArrayList<>();
 
     public Member(String name, String major, String part,int generation, RoleType roleType, String studentId, String position) {
         this.name = name;
