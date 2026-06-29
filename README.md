@@ -1,4 +1,4 @@
-###  Update  2026 06/22
+###  Update  2026 06/30
 
 # 🦁 멋쟁이사자처럼 Java 과제 모음
 
@@ -199,8 +199,6 @@ MemberService service = new MemberService(repository);
 
 ---
 
----
-
 ## 6주차 - Spring Bean & IoC / DI / REST Controller
 
 > 5주차에서 직접 new로 조립했던 코드를 스프링 컨테이너가 관리하도록 전환하고, 첫 번째 REST API 엔드포인트 구현
@@ -276,6 +274,7 @@ public class HelloController {
 
 > 💡 IoC(제어의 역전): 객체 제어권이 개발자 → 스프링 컨테이너로 이전  
 > 💡 생성자 1개일 때 `@Autowired` 생략 가능 (Spring 4.3+)
+
 ---
 
 ## 7주차 - REST API / DTO / ResponseEntity
@@ -312,62 +311,6 @@ dto/
 | PUT | /members/staffs/{name} | Staff 수정 | 200 | 404 (없음) |
 | DELETE | /members/{name} | 멤버 삭제 | 204 | 404 (없음) |
 
-### 핵심 코드
-
-```java
-// MemberController — CRUD API
-@RestController
-@RequestMapping("/members")
-public class MemberController {
-
-    private final MemberService memberService;
-
-    public MemberController(MemberService memberService) {
-        this.memberService = memberService; // 생성자 주입 (@Autowired 생략)
-    }
-
-    // POST /members/lions — Lion 등록
-    @PostMapping("/lions")
-    public ResponseEntity<LionResponse> createLion(@RequestBody LionCreateRequest request) {
-        LionResponse response = memberService.createLion(request);
-        if (response == null) return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409
-        return ResponseEntity.status(HttpStatus.CREATED).body(response); // 201
-    }
-
-    // GET /members/{name} — 단일 조회
-    @GetMapping("/{name}")
-    public ResponseEntity<Object> getMember(@PathVariable String name) {
-        Object response = memberService.findMemberByName(name);
-        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
-        return ResponseEntity.ok(response); // 200
-    }
-
-    // PUT /members/lions/{name} — Lion 수정
-    @PutMapping("/lions/{name}")
-    public ResponseEntity<LionResponse> updateLion(@PathVariable String name, @RequestBody LionUpdateRequest request) {
-        LionResponse response = memberService.updateLion(name, request);
-        if (response == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
-        return ResponseEntity.ok(response); // 200
-    }
-
-    // DELETE /members/{name} — 멤버 삭제
-    @DeleteMapping("/{name}")
-    public ResponseEntity<Void> deleteMember(@PathVariable String name) {
-        boolean deleted = memberService.deleteMember(name);
-        if (!deleted) return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
-        return ResponseEntity.noContent().build(); // 204
-    }
-}
-
-// LionResponse — static from() 팩토리 메서드
-public static LionResponse from(Lion lion) {
-    return new LionResponse(
-        lion.name, lion.major, lion.generation,
-        lion.part, "아기사자", lion.studentId
-    );
-}
-```
-
 ### 핵심 개념 요약
 
 | 개념 | 설명 |
@@ -380,6 +323,7 @@ public static LionResponse from(Lion lion) {
 
 > 💡 URI에는 동사 쓰지 말고 명사로 자원만 표현, 행위는 HTTP 메서드가 담당  
 > 💡 식별자(누구?)는 PathVariable, 데이터(뭘로?)는 RequestBody
+
 ---
 
 ## 8주차 - JPA / MySQL 연동 & 단일 엔티티 리팩토링
@@ -407,95 +351,6 @@ After (8주차):  Member (id, name, major, generation, part, roleType, studentId
                 RoleType { LION("아기사자"), STAFF("운영진") }
 ```
 
-### 삭제된 파일
-| 파일/패키지 | 이유 |
-|------|------|
-| `MemoryMemberRepository.java` | JpaRepository가 대체 |
-| `AppConfig.java` | @Service/@Repository로 자동 빈 등록 |
-| `domain/role/` 패키지 전체 | Member 엔티티로 대체 |
-| `LionResponse.java` | MemberResponse로 통합 |
-| `StaffResponse.java` | MemberResponse로 통합 |
-
-### 완성된 API 목록
-| 메서드 | 경로 | 기능 | 성공 | 실패 |
-|------|------|------|------|------|
-| POST | /members/lions | Lion 등록 | 201 | - |
-| POST | /members/staffs | Staff 등록 | 201 | - |
-| GET | /members/{id} | 단일 조회 | 200 | 404 (없음) |
-| PUT | /members/lions/{id} | Lion 수정 | 200 | 404 (없음) |
-| PUT | /members/staffs/{id} | Staff 수정 | 200 | 404 (없음) |
-| DELETE | /members/{id} | 멤버 삭제 | 204 | 404 (없음) |
-
-### 핵심 코드
-
-```java
-// Member 엔티티
-@Entity
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Member {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT
-    private Long id;
-
-    private String name;
-    private String major;
-    private String part;
-    private int generation;
-
-    @Enumerated(EnumType.STRING) // DB에 "LION", "STAFF" 문자열로 저장
-    private RoleType roleType;
-
-    private String studentId; // Lion일 때만 값, Staff는 null
-    private String position;  // Staff일 때만 값, Lion은 null
-
-    public Member(String name, String major, String part, int generation,
-                  RoleType roleType, String studentId, String position) { ... }
-
-    public void updateInfo(String major, String part, int generation) { ... }
-    public void updateStudentId(String studentId) { ... }
-    public void updatePosition(String position) { ... }
-}
-
-// RoleType Enum
-@Getter
-@RequiredArgsConstructor
-public enum RoleType {
-    LION("아기사자"),
-    STAFF("운영진");
-
-    private final String displayName;
-}
-
-// MemberRepository - JpaRepository 상속
-@Repository
-public interface MemberRepository extends JpaRepository<Member, Long> {
-    Optional<Member> findByName(String name); // 메서드 이름으로 자동 쿼리 생성
-}
-
-// MemberResponse - 응답 DTO 통합
-public class MemberResponse {
-    public Long id;
-    public String name;
-    public String major;
-    public int generation;
-    public String part;
-    public String roleName;
-    public String studentId;
-    public String position;
-
-    public static MemberResponse from(Member member) {
-        return new MemberResponse(
-            member.getId(), member.getName(), member.getMajor(),
-            member.getGeneration(), member.getPart(),
-            member.getRoleType().getDisplayName(), // enum → "아기사자"/"운영진"
-            member.getStudentId(), member.getPosition()
-        );
-    }
-}
-```
-
 ### 핵심 개념 요약
 
 | 개념 | 설명 |
@@ -509,5 +364,133 @@ public class MemberResponse {
 | `ddl-auto=create` | 앱 실행 시 테이블 자동 생성 (개발용) |
 
 > 💡 `JpaRepository` 상속하면 `save()`, `findById()`, `deleteById()`, `existsById()` 등 자동 제공  
-> 💡 `save()` 반환값을 사용해야 DB에서 채워진 `id` 값을 쓸 수 있음  
-> 💡 식별자가 `name` → `id`로 바뀐 이유: DB의 PK 기반 식별이 더 안전하고 정확함
+> 💡 `save()` 반환값을 사용해야 DB에서 채워진 `id` 값을 쓸 수 있음
+
+---
+
+## 9주차 - 연관관계 & 트랜잭션 (1:N 관계 설계)
+
+> Member와 Assignment 간의 1:N 양방향 관계를 설계하고, @Transactional로 데이터 안정성 확보
+
+### 학습 내용
+- `@ManyToOne` / `@OneToMany`로 1:N 양방향 연관관계 설정
+- `@JoinColumn`으로 외래키 컬럼 지정
+- `mappedBy`로 연관관계 주인 지정
+- `@Transactional(readOnly = true)`로 조회 성능 최적화
+- `@Transactional`로 데이터 변경 트랜잭션 관리
+- Stream API (`stream().map().collect()`)로 List 변환
+- 기능별 패키지 분리 (`member/`, `assignment/`)
+
+### 프로젝트 구조
+```
+src/main/java/
+└── org.exaple.like_lion_pbl.class5/
+    ├── member/
+    │   ├── controller/ — MemberController
+    │   ├── service/    — MemberService (@Transactional 추가)
+    │   ├── repository/ — MemberRepository
+    │   ├── domain/     — Member (@OneToMany 추가), RoleType
+    │   └── dto/        — LionCreateRequest, MemberResponse 등
+    └── assignment/
+        ├── controller/ — AssignmentController
+        ├── service/    — AssignmentService (@Transactional 적용)
+        ├── repository/ — AssignmentRepository
+        ├── domain/     — Assignment (@ManyToOne 엔티티)
+        └── dto/        — AssignmentCreateRequest, AssignmentResponse 등
+```
+
+### 연관관계 구조
+```
+Member (1) ←→ Assignment (N)
+
+Member.java
+└── @OneToMany(mappedBy = "member")
+    List<Assignment> assignments  ← 읽기 전용 (mappedBy)
+
+Assignment.java
+└── @ManyToOne
+    @JoinColumn(name = "member_id")
+    Member member  ← 연관관계 주인 (외래키 관리)
+```
+
+### 완성된 API 목록
+| 메서드 | 경로 | 기능 | 성공 | 실패 |
+|------|------|------|------|------|
+| POST | /members/{memberId}/assignments | 과제 등록 | 201 | 404 (멤버 없음) |
+| GET | /members/{memberId}/assignments | 멤버별 목록 | 200 | - |
+| GET | /assignments/{id} | 과제 단건 조회 | 200 | 404 |
+| PUT | /assignments/{id} | 과제 수정 | 200 | 404 |
+| DELETE | /assignments/{id} | 과제 삭제 | 204 | 404 |
+
+### 핵심 코드
+
+```java
+// Assignment 엔티티 - 연관관계 주인
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Assignment {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String title;
+    private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "member_id")  // assignment 테이블에 member_id 컬럼 생성
+    private Member member;
+}
+
+// Member 엔티티 - 양방향 관계 추가
+@OneToMany(mappedBy = "member")           // 읽기 전용, DB 컬럼 추가 없음
+private List<Assignment> assignments = new ArrayList<>();
+
+// AssignmentService - @Transactional 패턴
+@Service
+@Transactional(readOnly = true)  // 클래스 레벨: 조회 메서드 기본 적용
+public class AssignmentService {
+
+    @Transactional  // 메서드 레벨: 데이터 변경 시 오버라이드
+    public AssignmentResponse create(Long memberId, AssignmentCreateRequest request) {
+        Member member = memberRepository.findById(memberId).orElse(null);
+        if (member == null) return null;
+        Assignment assignment = new Assignment(request.getTitle(), request.getDescription(), member);
+        return AssignmentResponse.from(assignmentRepository.save(assignment));
+    }
+
+    public List<AssignmentResponse> findByMemberId(Long memberId) {
+        return assignmentRepository.findByMemberId(memberId)
+                .stream()
+                .map(AssignmentResponse::from)
+                .collect(Collectors.toList());
+    }
+}
+
+// AssignmentResponse - from() 에서 연관 엔티티 접근
+public static AssignmentResponse from(Assignment assignment) {
+    return new AssignmentResponse(
+        assignment.getId(),
+        assignment.getTitle(),
+        assignment.getDescription(),
+        assignment.getMember().getId(),    // 연관된 Member의 id
+        assignment.getMember().getName()   // 연관된 Member의 name
+    );
+}
+```
+
+### 핵심 개념 요약
+
+| 개념 | 설명 |
+|------|------|
+| `@ManyToOne` | N:1 관계 선언, 연관관계 주인 (외래키 보유) |
+| `@OneToMany(mappedBy)` | 1:N 관계 선언, 읽기 전용 (DB 컬럼 추가 없음) |
+| `@JoinColumn(name)` | 외래키 컬럼명 지정 |
+| `mappedBy = "member"` | Assignment의 member 필드가 관계를 관리함을 선언 |
+| `@Transactional(readOnly=true)` | 조회 전용 트랜잭션, 성능 최적화 |
+| `@Transactional` | 데이터 변경 트랜잭션, 실패 시 롤백 보장 |
+| `stream().map().collect()` | List<Entity> → List<DTO> 변환 |
+
+> 💡 연관관계 주인 = 외래키를 가진 쪽(N쪽), `@ManyToOne` 붙은 곳  
+> 💡 `mappedBy` 붙은 쪽은 읽기 전용, DB에 컬럼이 추가되지 않음  
+> 💡 `@Transactional(readOnly=true)` 클래스 레벨 + `@Transactional` 메서드 레벨 조합이 일반적인 패턴
